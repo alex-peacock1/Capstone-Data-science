@@ -328,7 +328,7 @@ usage_score_df =pd.DataFrame(list(usage_score_dict.items()), columns = ['Questio
 Renamed_Ttech[usage_cols] = Renamed_Ttech[usage_cols].replace(value_mapping)
 
 
-
+#making usage score and dropping Nan values
 dropna_df = Renamed_Ttech.dropna(subset = usage_cols)
 
 dropna_df = dropna_df.assign(**{col: dropna_df[col] * usage_score_dict[col] for col in usage_cols})
@@ -336,7 +336,7 @@ dropna_df = dropna_df.assign(**{col: dropna_df[col] * usage_score_dict[col] for 
 
 dropna_df['usage_score'] = dropna_df[usage_cols].sum(axis = 1)
 
-
+#mkainv spread score 
 spread_cols = [col for col in Renamed_Ttech if col.startswith('T6')]
 
 dropna_df = dropna_df.dropna(subset = spread_cols)
@@ -355,6 +355,8 @@ spread_score_dict = dict(zip(spread_cols, spread_scores))
 dropna_df = dropna_df.assign(**{col: dropna_df[col] * spread_score_dict[col] for col in spread_cols})
 dropna_df['spread_score'] = dropna_df[spread_cols].sum(axis = 1)
 
+
+#transforming spread and usgae and adding togtehr
 dropna_df['spread1_5'] = scaler.fit_transform(dropna_df[['spread_score']])* 5
 
 dropna_df['T_ICT_SCORE'] = dropna_df['spread1_5'] + dropna_df['usage_score']
@@ -382,7 +384,7 @@ merged['T_ICT_SCORE'] = pd.to_numeric(merged['T_ICT_SCORE'], errors='coerce')
 #    SES_df[col] = SES_df[col] * SES_df['W_FSTUWT']
 weighted_plaus_vals = [col for col in SES_df.columns if 'weighted' in col]
 
-
+#finding mean of plaus vals at school level rather than student level 
 plaus_val_by_school = pd.DataFrame(SES_df.groupby('CNTSCHID')[plaus_vals].mean().reset_index())
 weighted_plaus_val_by_school = pd.DataFrame(SES_df.groupby('CNTSCHID')[weighted_plaus_vals].mean().reset_index())
 
@@ -406,20 +408,20 @@ weighted_math_cols = [col for col in merged.columns if 'MATH' in col and 'weight
 weighted_scie_cols = [col for col in merged.columns if 'SCIE' in col and 'weighted' in col]
 
 SES_vs_pv_x = np.linspace(merged['wghted_SES_Score'].min(), merged['wghted_SES_Score'].max(), 100)
-#regression lines for each plausible values, 
+#regression lines for each plausible values with weigthed SES score and values, 
 read_SES_y = (112489.51730583786* SES_vs_pv_x) + 1051.7495715307468
 math_SES_y = (106154.90188502024 * SES_vs_pv_x) + 1190.6378311689634
 scie_SES_y = (112952.00502662756 * SES_vs_pv_x) + 792.1843380270618
-
+#dropping outliers
 merged_cleaned = merged[merged['wghted_SES_Score'] != merged['wghted_SES_Score'].max()]
-
+#x values for plot regression line
 SES_vs_ICT_x = np.linspace(merged_cleaned['wghted_SES_Score'].min(), merged_cleaned['wghted_SES_Score'].max(), 100)
 
-
+#
 SES_TICT_regression = sps.linregress(merged_cleaned['wghted_SES_Score'], merged_cleaned['T_ICT_SCORE'])
 
 y_SES_TICT = (SES_vs_pv_x * SES_TICT_regression.slope) + SES_TICT_regression.intercept
-
+#replicate weights for each school for brr calculations 
 unique_weights_df = replicate_weights_df.drop_duplicates(subset='CNTSCHID').reset_index(drop=True)
 
 
@@ -437,7 +439,7 @@ cf_SES_TICT = SES_TICT_regression.rvalue
 
 
 
-
+#brr calculation for SES and ICT score regression
 
 T_ICT_for_brr = np.array(merged['T_ICT_SCORE'])
 raw_SES_for_brr = np.array(merged['SES_Score'])
